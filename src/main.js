@@ -1,0 +1,1 @@
+// Ustoz tekshirmay turing hali boshlashga ulgurmadim
