@@ -11,7 +11,8 @@ const AdminSchema = new Schema(
         password: { type: String, required: true },
         phone_number: { type: String, unique: true, required: true },
         is_active: { type: Boolean, default: true },
-        role: { type: String, enum: Object.values(UserRole), default: UserRole.ADMIN }
+        role: { type: String, enum: Object.values(UserRole), default: UserRole.ADMIN },
+        verfyOTP: { type: Number,min: 100000, max: 999999, required: false } 
     },
     {
         timestamps: true,

@@ -2,12 +2,15 @@ import jwt from 'jsonwebtoken'
 import config from '../config/index.js'
 
 class Token {
+
+    // JWT token (ya'ni maxsus kalitli raqamli belgilar toplami) yaratibberadi  
     generateAccessToken(payload) {
-        return jwt.sign(payload, config.TOKEN.ACCESS_KEY, {
-            expiresIn: config.TOKEN.ACCESS_TIME
+        return jwt.sign(payload, config.TOKEN.ACCESS_KEY, {     
+            expiresIn: config.TOKEN.ACCESS_TIME                 // Token amal qilish muddati (masalan "1h", "7d")
         });
     }
 
+    // Refresh Tokenni yaratish 
     generateRefreshToken(payload){
         return jwt.sign(payload, config.TOKEN.REFRESH_KEY, {
             expiresIn: config.TOKEN.REFRESH_TIME

@@ -12,7 +12,7 @@ class AdminValidation {
             email: Joi.string().email().required(),
             password: Joi.string().pattern(AdminValidation.passwordRegex).required(),
             phone_number: Joi.string().pattern(AdminValidation.phoneRegex).required(),
-            role: Joi.string().valid(UserRole.ADMIN, UserRole.SUPERADMIN).required()
+            role: Joi.string().valid(UserRole.ADMIN, UserRole.SUPERADMIN).required(),
         })
     };
 
@@ -26,7 +26,7 @@ class AdminValidation {
         })
     }
 
-    update(){
+    update() {
         return Joi.object({
             full_name: Joi.string().optional(),
             username: Joi.string().optional(),
@@ -35,6 +35,27 @@ class AdminValidation {
             phone_number: Joi.string().pattern(AdminValidation.phoneRegex).optional(),
             role: Joi.string().default(UserRole.ADMIN).optional()
         });
+    }
+
+    requestPasswordReset() {
+        return Joi.object({
+            email: Joi.string().email().required()
+        });
+    }
+
+    verifyPasswordOTP() {
+        return Joi.object({
+            email: Joi.string().email().required(),
+            otp: Joi.number().required(),
+            password: Joi.string().pattern(AdminValidation.passwordRegex).required(),
+        });
+    }
+
+    updatePasswordForAdmin() {
+        return Joi.object({
+            OldPassword: Joi.string().pattern(AdminValidation.passwordRegex).required(),
+            NewPassword: Joi.string().pattern(AdminValidation.passwordRegex).required(),
+        })
     }
 
 }

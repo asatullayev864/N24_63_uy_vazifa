@@ -6,6 +6,10 @@ import Crypto from "../utils/Crypto.js";
 import { successRes } from "../utils/successRes.js";
 import { BaseController } from "./base.controller.js";
 import Token from "../utils/Token.js";
+import crypto from "crypto";
+import sendEmail from "../utils/mail.js";
+import cookieParser from "cookie-parser";
+
 
 export class AdminController extends BaseController {
     constructor() {
@@ -65,7 +69,6 @@ export class AdminController extends BaseController {
         }
     }
 
-
     async signIn(req, res, next) {
         try {
             const { username = '', email = '', phone_number = '', password } = req.body;
@@ -110,7 +113,7 @@ export class AdminController extends BaseController {
 
     async generateNewToken(req, res, next) {
         try {
-            const refreshToken = req.cookies?.refreshToken;
+            const refreshToken = req.cookies?.refreshTokenAdmin;
             if (!refreshToken) {
                 throw new AppError('Authorization error', 401);
             }
@@ -142,27 +145,119 @@ export class AdminController extends BaseController {
 
     async signOut(req, res, next) {
         try {
-            const refreshToken = req.cookies?.refreshToken;
+            let refreshToken = req.cookies?.refreshTokenAdmin;
+
+
             if (!refreshToken) {
-                throw new AppError("Refresh Token not found", 401)
+                refreshToken = req.body?.refreshTokenAdmin;
+            }
+
+            if (!refreshToken) {
+                throw new AppError("Refresh Token not found", 401);
             }
 
             const verifyToken = Token.verifyToken(refreshToken, config.TOKEN.REFRESH_KEY);
             if (!verifyToken) {
-                throw new AppError('Refresh Token expire', 401);
+                throw new AppError("Refresh Token expire", 401);
             }
 
             const admin = await Admin.findById(verifyToken?.id);
             if (!admin) {
-                throw new AppError('Forbidden user', 403);
+                throw new AppError("Forbidden user", 403);
             }
 
-            res.clearCookie('refreshToken');
-            return successRes(res, {})
+            res.clearCookie("refreshTokenAdmin"); 
+
+            return successRes(res, { message: "Successfully signed out" });
+        } catch (error) {
+            console.log(error);
+            next(error);
+        }
+    }
+
+
+    async requestPasswordReset(req, res, next) {
+        try {
+            const { email } = req.body
+
+            // Adminni email orqali topish 
+            const admin = await Admin.findOne({ email });
+            if (!admin) {
+                throw new AppError('Email not found', 404);
+            }
+
+            // Reset token yaratish 
+            const resetToken = crypto.randomBytes(32).toString("hex");
+
+            // Adminga token va amal qilish muddatini berish 
+            admin.resetPasswordToken = resetToken;
+            admin.resetPasswordExpires = Date.now() + 3600 * 1000;
+            await admin.save()
+
+            const resetURL = `${config.CONFIRM_PASSWORD_URL}/${resetToken}`;
+
+            // Otp jonatish 
+            function generateSecureOTP() {
+                const buffer = crypto.randomBytes(6);
+                let otp = '';
+                for (let i = 0; i < 6; i++) {
+                    otp += (buffer[i] % 10).toString(); // 0–9 raqamlar
+                }
+                return otp;
+            }
+
+            const otp = generateSecureOTP();
+
+            console.log("Your secure 6-digit OTP is:", otp);
+
+
+            // Email yuborish 
+            await sendEmail({
+                to: admin.email,
+                subject: 'Rest your password ',
+                html: `<p>${otp} <a href="${resetURL}">here</a> to reset your password. Token is valid for 1 hour.</p>`,
+            });
+
+            admin.verfyOTP = otp
+            await admin.save();
+
+
+            console.log(`OTP: ${otp}`);
+            return successRes(res, { message: "Rest link sent to email" });
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async verifyPasswordOTP(req, res, next) {
+        try {
+            const { email, otp, password } = req.body
+
+            const existsEmail = await Admin.findOne({ email })
+            if (!existsEmail) {
+                throw new AppError('Email not found', 400);
+            }
+
+            if (otp !== existsEmail.verfyOTP) {
+                throw new AppError('Opt not found', 400)
+            }
+
+            // O'tipni ishlatgandan kegin o'chirish 
+            existsEmail.verfyOTP = null;
+
+            const hashedPassword = await Crypto.encrypt(password);
+            existsEmail.password = hashedPassword;
+
+            await existsEmail.save();
+
+            return successRes(res, {
+                message: `OTP to'g'ri \n Parolingiz yangilandi`
+            });
         } catch (error) {
             next(error);
         }
     }
+
 
     async updateAdmin(req, res, next) {
         try {
@@ -218,13 +313,13 @@ export class AdminController extends BaseController {
         }
     }
 
-    async updatePasswordForAdmin(req, res, next){
+    async updatePasswordForAdmin(req, res, next) {
         try {
             const id = req.params?.id;
             const admin = BaseController.checkById(Admin, id)
             const { olPassword, newPassword } = req.body;
             const isMatchPassword = await Crypto.decrypt(olPassword, admin.hashedPassword);
-            if(!isMatchPassword){
+            if (!isMatchPassword) {
                 throw new AppError('Incorrect old password', 400);
             }
 
@@ -235,4 +330,6 @@ export class AdminController extends BaseController {
             next(error);
         }
     }
+
+
 }

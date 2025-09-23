@@ -19,7 +19,11 @@ router
     .get('/', AuthGuard, RolesGuard(UserRole.SUPERADMIN), controller.findAll)
     .get('/:id', AuthGuard, RolesGuard(UserRole.SUPERADMIN, "ID"), controller.findById)
 
-    .patch('/password/:id', AuthGuard, RolesGuard(UserRole.SUPERADMIN, "ID"), validate(AdminValidation.update), controller.updateAdmin)
-    
+    .post('/forget-password', validate(AdminValidation.requestPasswordReset), controller.requestPasswordReset)
+    .post('/ConfirmOTP', validate(AdminValidation.verifyPasswordOTP),controller.verifyPasswordOTP)
 
+    .patch('/updateAdmin/:id', AuthGuard, RolesGuard(UserRole.SUPERADMIN, "ID"), validate(AdminValidation.update), controller.updateAdmin)
+    .patch('/updatePasswordForAdmin/:id', AuthGuard, RolesGuard(UserRole.SUPERADMIN, UserRole.ADMIN, "ID"), validate(AdminValidation.updatePasswordForAdmin), controller.updatePasswordForAdmin)
+    
+    .delete('/:id', AuthGuard, RolesGuard(UserRole.SUPERADMIN, "ID"), controller.delete )
 export default router;
